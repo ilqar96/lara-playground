@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\City;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 
@@ -27,11 +28,22 @@ class CalculatePriceRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $addresses = $this->input('addresses');
+
+            //check if address not same
             for ($i = 1; $i < count($addresses); $i++) {
                 if ($this->isSameAddress($addresses[$i - 1], $addresses[$i])) {
                     $validator->errors()->add('addresses', 'Consecutive addresses cannot be the same.');
                 }
             }
+
+            //validate cities
+            foreach ($addresses as $address){
+                if (!$this->addressExists($address)){
+                    $city = $address['city'];
+                    $validator->errors()->add('cities', "$city address are not found in the database.");
+                }
+            }
+
         });
     }
 
@@ -42,5 +54,19 @@ class CalculatePriceRequest extends FormRequest
             $address1['city'] === $address2['city'];
     }
 
+
+    /**
+     * Check if the given address exists in the cities collection.
+     *
+     * @param array $address
+     * @return bool
+     */
+    public function addressExists(array $address): bool
+    {
+        return City::where('country', $address['country'])
+            ->where('zipCode', $address['zip'])
+            ->where('name', $address['city'])
+            ->exists();
+    }
 
 }
