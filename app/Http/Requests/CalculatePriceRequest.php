@@ -27,7 +27,7 @@ class CalculatePriceRequest extends FormRequest
     public function withValidator(Validator $validator)
     {
         $validator->after(function ($validator) {
-            $addresses = $this->input('addresses');
+            $addresses = (array)$this->input('addresses');
 
             //check if address not same
             for ($i = 1; $i < count($addresses); $i++) {

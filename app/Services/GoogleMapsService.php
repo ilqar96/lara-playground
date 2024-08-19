@@ -55,7 +55,7 @@ class GoogleMapsService
                 'query' => [
                     'origin'      => $origin,
                     'destination' => $destination,
-                    'key'         => env('GOOGLE_MAPS_API_KEY'),
+                    'key'         => config('services.google.key'),
                     'units'       => 'metric',
                 ]
             ]);
