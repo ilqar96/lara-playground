@@ -6,6 +6,7 @@ use App\Http\Requests\CalculatePriceRequest;
 use App\Http\Resources\VehiclePriceResource;
 use App\Models\VehicleType;
 use App\Services\TransportService;
+use Exception;
 
 class TransportController extends Controller
 {
@@ -18,16 +19,27 @@ class TransportController extends Controller
         $vehicles = VehicleType::all();
 
         $res = [];
-        foreach ($vehicles as $vehicle){
-            $currPrice = TransportService::calcTransportPrice($addresses,$vehicle);
 
-            $res[] = [
-                'vehicle_type' => $vehicle->number,
-                'price' => $currPrice,
-            ];
+        try
+        {
+            foreach ($vehicles as $vehicle){
+                $currPrice = TransportService::calcTransportPrice($addresses,$vehicle);
+
+                $res[] = [
+                    'vehicle_type' => $vehicle->number,
+                    'price' => $currPrice,
+                ];
+            }
+
+            return VehiclePriceResource::collection($res)->response()->setStatusCode(200);
+
+        }catch (Exception $e) {
+            // Return error response if there was an issue calculating the price
+            return response()->json([
+                'error' => 'Failed to calculate transport price',
+                'message' => $e->getMessage(),
+            ], 500);
         }
-
-        return VehiclePriceResource::collection($res)->response()->setStatusCode(200);;
     }
 
 }

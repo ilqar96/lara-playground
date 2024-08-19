@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use Exception;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class GoogleMapsService
 {
@@ -13,11 +16,14 @@ class GoogleMapsService
     public function __construct()
     {
         $this->client = new Client();
-        $this->cacheTime = 3600; //seconds | 1 hour
-//        $this->cacheTime = 600; //seconds | 10 min
+//        $this->cacheTime = 3600; //seconds | 1 hour
+        $this->cacheTime = 600; //seconds | 10 min
     }
 
-    public function getDistance($origin, $destination)
+    /**
+     * @throws Exception|GuzzleException
+     */
+    public function getDistance($origin, $destination): float|int
     {
         $cacheKey = $this->generateCacheKey($origin, $destination);
 
@@ -28,25 +34,36 @@ class GoogleMapsService
             return $cachedDistance;
         }
 
-        // Fetch the distance from the API
-        $distance = $this->fetchDistanceFromApi($origin, $destination);
-
-        // Store distance
-        Cache::put($cacheKey, $distance, $this->cacheTime);
-
-        return $distance;
+        try {
+            // Fetch the distance from the API
+            $distance = $this->fetchDistanceFromApi($origin, $destination);
+            // Store distance cache
+            Cache::put($cacheKey, $distance, $this->cacheTime);
+            return $distance;
+        } catch (Exception $e) {
+            throw new Exception("Failed to fetch distance from Google Maps API.");
+        }
     }
 
-    private function fetchDistanceFromApi($origin, $destination)
+    /**
+     * @throws Exception|GuzzleException
+     */
+    private function fetchDistanceFromApi($origin, $destination): float|int
     {
-        $response = $this->client->get('https://maps.googleapis.com/maps/api/directions/json', [
-            'query' => [
-                'origin'      => $origin,
-                'destination' => $destination,
-                'key'         => env('GOOGLE_MAPS_API_KEY'),
-                'units'       => 'metric',
-            ]
-        ]);
+        try {
+            $response = $this->client->get('https://maps.googleapis.com/maps/api/directions/json', [
+                'query' => [
+                    'origin'      => $origin,
+                    'destination' => $destination,
+                    'key'         => env('GOOGLE_MAPS_API_KEY'),
+                    'units'       => 'metric',
+                ]
+            ]);
+        } catch (Exception $e) {
+            Log::error('GOOGLE_MAP_API request failed: ' . $e->getMessage());
+            throw new Exception('Google Maps API request failed: ' . $e->getMessage());
+        }
+
 
         $data = json_decode($response->getBody(), true);
 
@@ -63,7 +80,8 @@ class GoogleMapsService
             }
         }
 
-        return 0;
+        Log::error('GOOGLE_MAP_API Invalid response: '.json_encode($data));
+        throw new Exception("Invalid response from Google Maps API.");
     }
 
     private function generateCacheKey($origin, $destination)

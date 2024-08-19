@@ -14,7 +14,7 @@ Route::group(['prefix' => 'v1'], function () {
 
 
     //TEST ROUTE
-//    Route::post('transport/calculate/test', [TransportController::class, 'calculatePrice']);
+    Route::post('transport/calculate/test', [TransportController::class, 'calculatePrice']);
 
     Route::group(['middleware' => ['auth:sanctum'] ], function () {
 
